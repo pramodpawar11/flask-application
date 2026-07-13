@@ -69,6 +69,7 @@ Before you begin, make sure you have the following installed:
    - Visit http://localhost:5000/insert_sql to insert a message directly into the `messages` table via an SQL query.
 
 ## Cleaning Up
+"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_hgpqjncieyk"
 
 To stop and remove the Docker containers, press `Ctrl+C` in the terminal where the containers are running, or use the following command:
 
