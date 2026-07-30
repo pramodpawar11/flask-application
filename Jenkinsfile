@@ -27,7 +27,7 @@ pipeline {
         }
         stage("Start the application"){
             steps{
-                sh "docker compose donw -d"
+                sh "docker compose down -d"
                 sh "docker compose pull"
                 sh "docker compose up -d"
             }
