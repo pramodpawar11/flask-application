@@ -1,65 +1,36 @@
-@Library("Shared") _
-pipeline{
-    
-    agent { label "dev"};
-    
+pipeline {
+    agent any
     stages{
-        stage("Code Clone"){
+        stage("Checkout"){
             steps{
-               script{
-                   clone("https://github.com/LondheShubham153/two-tier-flask-app.git", "master")
-               }
-            }
-        }
-        stage("Trivy File System Scan"){
-            steps{
-                script{
-                    trivy_fs()
-                }
+                git url: "https://github.com/pramodpawar11/flask-application.git", branch:"master"
             }
         }
         stage("Build"){
             steps{
-                sh "docker build -t two-tier-flask-app ."
+                sh "docker build -f ./DockerMultistage -t flask-application:v3 ."
             }
-            
         }
-        stage("Test"){
+        stage("Manual Testing"){
             steps{
                 echo "Developer / Tester tests likh ke dega..."
             }
-            
         }
-        stage("Push to Docker Hub"){
+        stage("Push to dockerhub"){
             steps{
-                script{
-                    docker_push("dockerHubCreds","two-tier-flask-app")
-                }  
+                withCredentials([usernamePassword(credentialsId:"dockerhubCred",usernameVariable:"dockerhubUsername",passwordVariable:"dockerhubPassword")]){
+                sh "docker login -u ${env.dockerhubUsername} -p ${env.dockerhubPassword}"
+                sh "docker image tag flask-application:v3 ${env.dockerhubUsername}/flask-application:v3"
+                sh "docker push ${env.dockerhubUsername}/flask-application:v3"
+                }
             }
         }
-        stage("Deploy"){
+        stage("Start the application"){
             steps{
-                sh "docker compose up -d --build flask-app"
-            }
-        }
-    }
-
-post{
-        success{
-            script{
-                emailext from: 'mentor@trainwithshubham.com',
-                to: 'mentor@trainwithshubham.com',
-                body: 'Build success for Demo CICD App',
-                subject: 'Build success for Demo CICD App'
-            }
-        }
-        failure{
-            script{
-                emailext from: 'mentor@trainwithshubham.com',
-                to: 'mentor@trainwithshubham.com',
-                body: 'Build Failed for Demo CICD App',
-                subject: 'Build Failed for Demo CICD App'
+                sh "docker compose up -d --build flask-application:v3"
             }
         }
     }
 }
+
+
