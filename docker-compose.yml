@@ -19,7 +19,7 @@ services:
       start_period: 60s
 
   flaskApplication:
-    image: pramodpawar11/flask-application:v3
+    image: pramodpawar11/flask-application:${IMAGE_TAG:-latest}
     container_name: flaskApplication
     ports:
       - "5000:5000"
