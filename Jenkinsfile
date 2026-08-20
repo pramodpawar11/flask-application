@@ -1,38 +1,51 @@
 pipeline {
     agent any
-    stages{
-        stage("Checkout"){
-            steps{
-                git url: "https://github.com/pramodpawar11/flask-application.git", branch:"master"
+    
+    environment {
+        IMAGE_NAME = "pramodpawar11/flask-application"
+        IMAGE_TAG  = "${BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                git branch: 'master',
+                    url: 'https://github.com/pramodpawar11/flask-application.git'
             }
         }
-        stage("Build"){
-            steps{
-                sh "docker build -f ./DockerMultistage -t flask-application:v3 ."
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
             }
         }
-        stage("Manual Testing"){
-            steps{
-                echo "Developer / Tester tests likh ke dega..."
-            }
-        }
-        stage("Push to dockerhub"){
-            steps{
-                withCredentials([usernamePassword(credentialsId:"dockerhubCred",usernameVariable:"dockerhubUsername",passwordVariable:"dockerhubPassword")]){
-                sh "docker login -u ${env.dockerhubUsername} -p ${env.dockerhubPassword}"
-                sh "docker image tag flask-application:v3 ${env.dockerhubUsername}/flask-application:v3"
-                sh "docker push ${env.dockerhubUsername}/flask-application:v3"
+
+        stage('Scan Docker Image with Trivy') {
+            steps {
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    sh "trivy image --severity CRITICAL --exit-code 0 ${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
         }
-        stage("Start the application"){
-            steps{
-                sh "docker compose down"
-                sh "docker compose pull"
-                sh "docker compose up -d"
+
+        stage('Login and Push to Dockerhub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerHubCredentials',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                    sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Start the application') {
+            steps {
+               sh "IMAGE_TAG=${BUILD_NUMBER} docker compose down"
+               sh "IMAGE_TAG=${BUILD_NUMBER} docker compose up -d"
             }
         }
     }
 }
-
-
